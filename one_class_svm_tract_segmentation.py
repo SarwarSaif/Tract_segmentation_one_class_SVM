@@ -8,29 +8,32 @@ Created on Mon Apr 29 05:21:13 2019
 
 import numpy as np
 
-from dipy.viz import fvtk
+from dipy.viz import window, actor
+from dipy.tracking.streamline import transform_streamlines
 import vtk.util.colors as colors
-from sklearn.neighbors import KDTree
+from dipy.tracking import utils
 from dipy.tracking.streamline import set_number_of_points
+from sklearn.neighbors import KDTree
 from dipy.tracking.distances import bundles_distances_mam
 from sklearn import svm
 import nibabel as nib
 from joblib import Parallel, delayed
 
-def show_tract(segmented_tract_positive, color_positive,color_negative,segmented_tract_negative):
-   """Visualization of the segmented tract.
-   """ 
-   ren = fvtk.ren()           
-   fvtk.add(ren, fvtk.line(segmented_tract_positive.tolist(),
-                           colors=color_positive,
-                           linewidth=2,
-                           opacity=0.3))
-   fvtk.add(ren, fvtk.line(segmented_tract_negative.tolist(),
-                           colors=color_negative,
-                           linewidth=2,
-                           opacity=0.3))                         
-   fvtk.show(ren)
-   fvtk.clear(ren)
+def show_tract(segmented_tract, color):
+    """Visualization of the segmented tract.
+    """ 
+    affine=utils.affine_for_trackvis(voxel_size=np.array([1.25,1.25,1.25]))
+    bundle_native = transform_streamlines(segmented_tract, np.linalg.inv(affine))
+
+    renderer = window.Renderer()
+    stream_actor = actor.line(bundle_native, linewidth=0.1)
+    bar = actor.scalar_bar()
+    renderer.add(stream_actor)
+    renderer.add(bar)
+    window.show(renderer, size=(600, 600), reset_camera=False)          
+    """Take a snapshot of the window and save it
+    """
+    window.record(renderer, out_path='bundle2.1.png', size=(600, 600))          
 
 def load(filename):
     """Load tractogram from TRK file 
